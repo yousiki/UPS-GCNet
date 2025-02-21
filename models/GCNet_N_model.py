@@ -5,33 +5,34 @@ from utils import eval_utils
 from . import model_utils
 from collections import OrderedDict
 
+
 class GCNetNModel(GCNetModel):
     @staticmethod
     def modify_commandline_options(parser, is_train=True):
-        parser.add_argument('--GCNet_name', default='GCNet')
-        parser.add_argument('--GCNet_checkp', default='')
-        parser.add_argument('--Normal_Net_name', default='PS_FCN')
-        parser.add_argument('--Normal_Net_checkp', default='')
-        parser.add_argument('--in_est_n', default=True, action='store_false')
-        parser.add_argument('--in_est_sd', default=True, action='store_false')
+        parser.add_argument("--GCNet_name", default="GCNet")
+        parser.add_argument("--GCNet_checkp", default="")
+        parser.add_argument("--Normal_Net_name", default="PS_FCN")
+        parser.add_argument("--Normal_Net_checkp", default="")
+        parser.add_argument("--in_est_n", default=True, action="store_false")
+        parser.add_argument("--in_est_sd", default=True, action="store_false")
         parser.set_defaults(test_resc=False)
 
         if is_train:
-            parser.set_defaults(milestones=[2, 4, 6, 8, 10], epochs=20, init_lr=0.0005) 
+            parser.set_defaults(milestones=[2, 4, 6, 8, 10], epochs=20, init_lr=0.0005)
         else:
-            parser.set_defaults(test_root='GCNet_checkp') 
+            parser.set_defaults(test_root="GCNet_checkp")
             # In run_model mode, results will be save in the same directory as args.GCNet_checkp
 
-        str_keys = ['GCNet_name', 'Normal_Net_name']
-        val_keys = [ ]
-        bool_keys = ['in_est_n', 'in_est_sd'] 
+        str_keys = ["GCNet_name", "Normal_Net_name"]
+        val_keys = []
+        bool_keys = ["in_est_n", "in_est_sd"]
         return parser, str_keys, val_keys, bool_keys
 
     def __init__(self, args, log):
         opt = vars(args)
         BaseModel.__init__(self, opt)
-        self.fixed_net_names = ['GCNet']
-        self.net_names = ['Normal_Net']
+        self.fixed_net_names = ["GCNet"]
+        self.net_names = ["Normal_Net"]
 
         c_in = self.get_in_channel_nums(opt, log)
         self.GCNet = self.import_network(args.GCNet_name)(opt, c_in)
@@ -43,17 +44,21 @@ class GCNetNModel(GCNetModel):
 
         if self.is_train:
             self.normal_crit = model_utils.NormalCrit(opt, log)
-            self.optimizer = torch.optim.Adam(self.Normal_Net.parameters(), lr=args.init_lr, betas=(args.beta_1, args.beta_2))
+            self.optimizer = torch.optim.Adam(
+                self.Normal_Net.parameters(),
+                lr=args.init_lr,
+                betas=(args.beta_1, args.beta_2),
+            )
             self.optimizers.append(self.optimizer)
             self.setup_lr_scheduler()
 
         self.load_checkpoint(log)
 
     def prepare_NNet_inputs(self, data, pred):
-        imgs = torch.split(data['img'], 3, 1)
-        dirs = torch.split(pred['dirs'], 1, 1)
-        ints = torch.split(pred['intens'], 1, 1)
-        
+        imgs = torch.split(data["img"], 3, 1)
+        dirs = torch.split(pred["dirs"], 1, 1)
+        ints = torch.split(pred["intens"], 1, 1)
+
         inputs = []
 
         imgs_int_normalized = []
@@ -82,15 +87,18 @@ class GCNetNModel(GCNetModel):
         return self.pred
 
     def optimize_weights(self):
-        normal_loss, normal_loss_term = self.normal_crit(self.pred['normal'], self.data['normal'])
-        self.loss = self.opt['normal_w'] * normal_loss
-            
+        normal_loss, normal_loss_term = self.normal_crit(
+            self.pred["normal"], self.data["normal"]
+        )
+        self.loss = self.opt["normal_w"] * normal_loss
+
         self.optimizer.zero_grad()
         self.loss.backward()
         self.optimizer.step()
         self.loss_terms = {}
-        for k in normal_loss_term: self.loss_terms[k] = normal_loss_term[k]
-    
+        for k in normal_loss_term:
+            self.loss_terms[k] = normal_loss_term[k]
+
     def prepare_records(self):
         records, iter_res = OrderedDict(), []
         records_GCNet, iter_res_GCNet = GCNetModel.prepare_records(self)

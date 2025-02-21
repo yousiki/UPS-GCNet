@@ -5,29 +5,30 @@ from utils import eval_utils
 from . import model_utils
 from collections import OrderedDict
 
+
 class LNModel(LModel):
     @staticmethod
     def modify_commandline_options(parser, is_train=True):
-        parser.add_argument('--L_Net_name',  default='L_Net')
-        parser.add_argument('--L_Net_checkp', default='')
-        parser.add_argument('--N_Net_name',  default='N_Net')
-        parser.add_argument('--N_Net_checkp', default='')
+        parser.add_argument("--L_Net_name", default="L_Net")
+        parser.add_argument("--L_Net_checkp", default="")
+        parser.add_argument("--N_Net_name", default="N_Net")
+        parser.add_argument("--N_Net_checkp", default="")
         parser.set_defaults(test_resc=False)
         if is_train:
-            parser.set_defaults(milestones=[2, 4], epochs=5, init_lr=0.0002) 
+            parser.set_defaults(milestones=[2, 4], epochs=5, init_lr=0.0002)
         else:
-            parser.set_defaults(test_root='L_Net_checkp') 
+            parser.set_defaults(test_root="L_Net_checkp")
             # In run_model mode, results will be save in the same directory as args.L_Net_checkp
-        str_keys = ['L_Net_name', 'N_Net_name']
-        val_keys = [ ]
-        bool_keys = [] 
+        str_keys = ["L_Net_name", "N_Net_name"]
+        val_keys = []
+        bool_keys = []
         return parser, str_keys, val_keys, bool_keys
 
     def __init__(self, args, log):
         opt = vars(args)
         BaseModel.__init__(self, opt)
-        self.fixed_net_names = ['L_Net'] # The network weight are fixed during
-        self.net_names = ['N_Net']
+        self.fixed_net_names = ["L_Net"]  # The network weight are fixed during
+        self.net_names = ["N_Net"]
 
         c_in = LModel.get_in_channel_nums(self, opt, log)
         self.L_Net = self.import_network(args.L_Net_name)(opt, c_in)
@@ -39,17 +40,21 @@ class LNModel(LModel):
 
         if self.is_train:
             self.normal_crit = model_utils.NormalCrit(opt, log)
-            self.optimizer = torch.optim.Adam(self.N_Net.parameters(), lr=args.init_lr, betas=(args.beta_1, args.beta_2))
+            self.optimizer = torch.optim.Adam(
+                self.N_Net.parameters(),
+                lr=args.init_lr,
+                betas=(args.beta_1, args.beta_2),
+            )
             self.optimizers.append(self.optimizer)
             self.setup_lr_scheduler()
 
         self.load_checkpoint(log)
 
     def prepare_NNet_inputs(self, data, pred):
-        imgs = torch.split(data['img'], 3, 1)
-        dirs = torch.split(pred['dirs'], 1, 1)
-        ints = torch.split(pred['intens'], 1, 1)
-        
+        imgs = torch.split(data["img"], 3, 1)
+        dirs = torch.split(pred["dirs"], 1, 1)
+        ints = torch.split(pred["intens"], 1, 1)
+
         inputs = []
 
         imgs_int_normalized = []
@@ -70,7 +75,7 @@ class LNModel(LModel):
         return inputs
 
     def forward(self):
-        self.L_Net_inputs = LModel.prepare_inputs(self, self.data) 
+        self.L_Net_inputs = LModel.prepare_inputs(self, self.data)
         self.L_Net_pred = self.L_Net(self.L_Net_inputs)
 
         self.N_Net_inputs = self.prepare_NNet_inputs(self.data, self.L_Net_pred)
@@ -81,16 +86,18 @@ class LNModel(LModel):
         return self.pred
 
     def optimize_weights(self):
-        normal_loss, normal_loss_term = self.normal_crit(self.pred['normal'], self.data['normal'])
-        self.loss = self.opt['normal_w'] * normal_loss
+        normal_loss, normal_loss_term = self.normal_crit(
+            self.pred["normal"], self.data["normal"]
+        )
+        self.loss = self.opt["normal_w"] * normal_loss
         self.optimizer.zero_grad()
         self.loss.backward()
         self.optimizer.step()
 
         self.loss_terms = {}
-        for k in normal_loss_term: 
+        for k in normal_loss_term:
             self.loss_terms[k] = normal_loss_term[k]
-    
+
     def prepare_records(self):
         records = OrderedDict()
         iter_res = []
@@ -104,6 +111,6 @@ class LNModel(LModel):
         visuals = []
         visuals += LModel.prepare_visual(self)
         return visuals
-    
+
     def save_visual_detail(self, log, split, epoch, obj_path, obj_names):
         LModel.save_visual_detail(self, log, split, epoch, obj_path, obj_names)

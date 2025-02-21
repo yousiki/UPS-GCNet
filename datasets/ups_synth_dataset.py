@@ -8,23 +8,25 @@ import torch.utils.data as data
 
 from datasets import pms_transforms
 from . import util
+
 np.random.seed(0)
 
+
 class UpsSynthDataset(data.Dataset):
-    def __init__(self, args, root, split='train'):
+    def __init__(self, args, root, split="train"):
         self.root = os.path.join(root)
         self.split = split
         self.args = args
         self.shape_list = util.read_list(os.path.join(self.root, split + args.l_suffix))
 
     def _get_input_path(self, index):
-        shape, mtrl = self.shape_list[index].split('/')
-        normal_path = os.path.join(self.root, 'Images', shape, shape + '_normal.png')
-        img_dir = os.path.join(self.root, 'Images', self.shape_list[index])
-        img_list = util.read_list(os.path.join(img_dir, '%s_%s.txt' % (shape, mtrl)))
+        shape, mtrl = self.shape_list[index].split("/")
+        normal_path = os.path.join(self.root, "Images", shape, shape + "_normal.png")
+        img_dir = os.path.join(self.root, "Images", self.shape_list[index])
+        img_list = util.read_list(os.path.join(img_dir, "%s_%s.txt" % (shape, mtrl)))
 
-        data = np.genfromtxt(img_list, dtype='str', delimiter=' ')
-        select_idx = np.random.permutation(data.shape[0])[:self.args.in_img_num]
+        data = np.genfromtxt(img_list, dtype="str", delimiter=" ")
+        select_idx = np.random.permutation(data.shape[0])[: self.args.in_img_num]
         data = data[select_idx, :]
         imgs = [os.path.join(img_dir, img) for img in data[:, 0]]
         dirs = data[:, 1:4].astype(np.float32)
@@ -34,7 +36,7 @@ class UpsSynthDataset(data.Dataset):
         normal_path, img_list, dirs = self._get_input_path(index)
         normal = imread(normal_path).astype(np.float32) / 255.0 * 2 - 1
         mask = pms_transforms.normal_to_mask(normal)
-        normal = normal * mask.repeat(3, 2) # set background to [0, 0, 0]
+        normal = normal * mask.repeat(3, 2)  # set background to [0, 0, 0]
 
         imgs = []
         for i in img_list:
@@ -47,8 +49,12 @@ class UpsSynthDataset(data.Dataset):
         crop_h, crop_w = self.args.crop_h, self.args.crop_w
 
         if self.args.rescale and not (crop_h == h):
-            sc_h = np.random.randint(crop_h, h) if self.args.rand_sc else self.args.scale_h
-            sc_w = np.random.randint(crop_w, w) if self.args.rand_sc else self.args.scale_w
+            sc_h = (
+                np.random.randint(crop_h, h) if self.args.rand_sc else self.args.scale_h
+            )
+            sc_w = (
+                np.random.randint(crop_w, w) if self.args.rand_sc else self.args.scale_w
+            )
             img, normal = pms_transforms.rescale(img, normal, [sc_h, sc_w])
 
         if self.args.crop:
@@ -59,7 +65,7 @@ class UpsSynthDataset(data.Dataset):
 
         if self.args.int_aug:
             ints = pms_transforms.get_intensity(len(imgs))
-            img  = np.dot(img, np.diag(ints.reshape(-1)))
+            img = np.dot(img, np.diag(ints.reshape(-1)))
         else:
             ints = np.ones(c)
 
@@ -68,19 +74,19 @@ class UpsSynthDataset(data.Dataset):
 
         mask = pms_transforms.normal_to_mask(normal)
         normal = pms_transforms.normalize_to_unit_len(normal, dim=2)
-        normal = normal * mask.repeat(3, 2) # set background to [0, 0, 0]
+        normal = normal * mask.repeat(3, 2)  # set background to [0, 0, 0]
 
-        item = {'normal': normal, 'img': img, 'mask': mask}
+        item = {"normal": normal, "img": img, "mask": mask}
         proxys = pms_transforms.get_proxy_features(self.args, normal, dirs)
 
-        for k in proxys: 
+        for k in proxys:
             item[k] = proxys[k]
 
-        for k in item.keys(): 
+        for k in item.keys():
             item[k] = pms_transforms.array_to_tensor(item[k])
 
-        item['dirs'] = torch.from_numpy(dirs).view(-1, 1, 1).float()
-        item['ints'] = torch.from_numpy(ints).view(-1, 1, 1).float()
+        item["dirs"] = torch.from_numpy(dirs).view(-1, 1, 1).float()
+        item["ints"] = torch.from_numpy(ints).view(-1, 1, 1).float()
         return item
 
     def __len__(self):
