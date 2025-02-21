@@ -1,0 +1,5 @@
+*
+!.gitignore
+!GCNet.pth
+!LCNet_CVPR2019.pth
+!PS-FCN_B_S_32.pth

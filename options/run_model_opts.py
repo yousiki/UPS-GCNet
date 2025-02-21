@@ -28,6 +28,7 @@ class RunModelOpts(BaseOpts):
         self.parser.add_argument("--est_num", default=1, type=int)
         self.parser.add_argument("--syn_obj", default="_sphere")
         self.parser.add_argument("--light_index", default=None)
+        self.parser.add_argument("--output_dir", default=None, type=str)
         self.is_train = False
 
     def collect_info(self):

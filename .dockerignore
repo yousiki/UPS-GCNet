@@ -1,4 +1,12 @@
 *
-!requirements.*
+!data/models_ECCV2020
+!datasets
+!main.py
+!models
+!options
 !pyproject.toml
 !README.md
+!requirements.lock
+!run_model.py
+!scripts
+!utils

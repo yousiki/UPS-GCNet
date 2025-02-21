@@ -11,16 +11,15 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     libglib2.0-0 \
     curl
 
-COPY . /ups-gcnet
-
-# Install dependencies
-WORKDIR /ups-gcnet
+# Install rye
 ADD https://rye.astral.sh/get /tmp/rye-install.sh
 RUN RYE_INSTALL_OPTION="--yes" bash /tmp/rye-install.sh
 ENV PATH="$PATH:/root/.rye/shims"
-RUN --mount=target=/root/.cache/uv,type=cache,sharing=locked \
-    rye sync --no-lock --no-dev
 
+# Copy the workspace
+COPY . /workspace
 WORKDIR /workspace
 
-VOLUME [ "/workspace" ]
+# Install dependencies
+RUN --mount=target=/root/.cache/uv,type=cache,sharing=locked \
+    rye sync --no-lock --no-dev

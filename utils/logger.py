@@ -71,8 +71,11 @@ class Logger(object):
 
     def _check_path(self, args, dir_name):
         if hasattr(args, "run_model") and args.run_model:
-            test_root = vars(args)[args.test_root]
-            log_root = os.path.join(os.path.dirname(test_root), dir_name)
+            if args.output_dir is not None:
+                log_root = args.output_dir
+            else:
+                test_root = vars(args)[args.test_root]
+                log_root = os.path.join(os.path.dirname(test_root), dir_name)
             args.log_dir = log_root
             sub_dirs = ["test"]
         else:
